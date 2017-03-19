@@ -1,0 +1,75 @@
+﻿@{
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Registreren";        
+
+    Validation.RequireField("userName", "Voer een gebruikersnaam in");
+    Validation.RequireField("password", "Voer een Wachtwoord in");
+    Validation.RequireField("password2", "Bevestig uw wachtwoord");
+
+
+    string username = "";
+    string password = "";
+    string password2 = "";
+    string messsage = "Nieuw account aanmaken";
+
+    if (IsPost && Request["userName"] != null && Request["password"] != null && Request["password2"] != null && Validation.IsValid())
+    {
+        username = Request["userName"].ToString();
+        password = Request["password"].ToString();
+        password2 = Request["password2"].ToString();
+
+        if (password == password2)
+        {
+            var db = Database.Open("Database1");
+            string userCheck = db.QueryValue("SELECT username FROM users WHERE username=@0", username);
+            if (userCheck == null)
+            {
+                string GuID = Guid.NewGuid().ToString().Substring(0, 12);
+
+
+                db.Execute("INSERT INTO users VALUES (@0,@1,@2)", GuID, username, password);
+                messsage = "Nieuw account: \"" + username + "\" aangemaakt, met lijstcode: " + GuID;
+                Session["newAcc"] = username;
+                Session["listcode"] = GuID;
+                Response.Redirect("~/NewAccount");
+            }
+            else
+            {
+                messsage = "Gebruikersnaam \"" + username + "\" is al in gebruik";
+            }
+        }
+        else
+        {
+            messsage = "Wachtwoorden komen niet overeen met elkaar";
+        }
+    }
+}
+    
+        <p>@messsage</p>
+        <form method="post">
+            <div>
+                <p>
+            <input type="text" name="userName" value="" placeholder="Gebruikersnaam"/>
+                    @Html.ValidationMessage("userName")
+                    </p>
+
+                <p>
+            <input type="password" name="password" value="" placeholder="Wachtwoord" />
+                    @Html.ValidationMessage("password")
+                    </p>
+                <p>
+            <input type="password" name="password2" value="" placeholder="Bevestig wachtwoord"/>
+                    @Html.ValidationMessage("password2")
+                    </p>
+
+            <input type="Submit" value="Registreren" /><br/><br/>  
+            </div>
+        </form>
+
+        <form action="~/Login" method="post">
+            <input type="Submit" value="Terug naar inloggen" /><br/>
+        </form>
+        <form action="~/Home" method="post">
+            <input type="Submit" value="Terug naar Home" /><br/>
+        </form>
+

@@ -1,0 +1,32 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8" />
+        <title>@Page.Title</title>
+        <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet">
+        <link href="~/Layout/bootstrap.css" rel="stylesheet" type="text/css"/>
+        <link href="~/Layout/Style.css" rel="stylesheet" type="text/css"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+
+    <body>
+
+    <div id="container" class="container">
+
+        <div id="header">
+          <h1>Hebberige Bruiden</h1>
+        </div>
+
+        <div id="main">
+          @RenderBody()
+        </div>
+
+        <div id="footer">
+          © @DateTime.Now.Year Jildert Venema
+        </div>
+
+    </div>
+
+    </body>
+</html>

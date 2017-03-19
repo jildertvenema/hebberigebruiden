@@ -1,0 +1,22 @@
+﻿@{
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Nieuw account";    
+    string message = "Er ging iets mis..";
+    if (Session["newAcc"] != null && Session["listcode"] != null)
+    {
+        message = "Nieuw account: \"" + Session["newAcc"].ToString() + "\" aangemaakt, met lijstcode: " + Session["listcode"].ToString();
+    }
+}
+
+
+        <p>@message</p>
+
+        <form action="~/Login" method="post">
+            <input type="Submit" value="Inloggen" /><br/>
+        </form>
+
+        <form action="~/Home" method="post">
+            <input type="Submit" value="Terug naar Home" /><br/>
+        </form>
+
+

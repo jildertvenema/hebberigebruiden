@@ -1,0 +1,61 @@
+﻿@{
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Login";    
+    var usern = "Please enter username, ";
+    var passw = "Please enter password";
+    var urlString = "";
+    var message = "";
+    var SQLpass = "";
+
+
+    if (!Request.QueryString["status"].IsEmpty()){if(Request.QueryString["status"] == "logout") {Session.Abandon(); Response.Redirect("~/Login");}}
+
+    if (!Request["userName"].IsEmpty() && !Request["Password"].IsEmpty())
+    {
+        usern = Request["userName"].ToString();
+        passw = Request["Password"].ToString();
+
+        var db = Database.Open("Database1");
+
+        SQLpass = db.QueryValue("SELECT password FROM users WHERE username=@0", usern);
+
+        if(SQLpass == passw)
+        {
+            Session["userName"] = Request["userName"];
+            Session["password"] = Request["password"];
+            Response.Redirect("~/Gifts");
+        }
+        else
+        {
+            message = "Ongeldige gebruikersnaam en/of wachtwoord. Heeft u nog geen account? Registreer dan via de knop hieronder a.u.b.";
+        }
+    }
+    else
+    {
+        message="Voer uw inloggegevens in a.u.b. Heeft u nog geen account? Registreer dan door middel van de knop hieronder.";
+    }
+}
+
+
+        <form method="post">
+            <div>
+
+            <input type="text" name="userName" value="" placeholder="Gebruikersnaam"/>
+
+            <input type="password" name="Password" value="" placeholder="Wachtwoord" />
+
+            <input type="Submit" value="Inloggen" /><br/>
+            </div>
+            <p>@message</p>
+        </form>
+
+        <form action="~/Registreren" method="post">
+            <input type="Submit" value="Registreren" /><br/>
+            </form>
+        </form>
+        <form action="~/Home" method="post">
+            <input type="Submit" value="Terug naar Home" /><br/>
+        </form>
+        <form action="~/Gifts" method="post" style="float: left">
+            <input type="Submit" value="Ik ben een gast" /><br/>
+        </form>

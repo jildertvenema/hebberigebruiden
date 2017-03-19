@@ -1,0 +1,44 @@
+﻿@{
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Cadeau verwijderen";    
+    string message = "Error";
+    string usernameD = "";
+
+    if (Request.QueryString["id"] != null && Request.QueryString["listcode"] != null)
+    {
+        var id = Request.QueryString["id"];
+        var listcode = Request.QueryString["listcode"];
+        if (id.IsInt() && !listcode.IsEmpty())
+        {
+            Database db = Database.Open("Database1");
+            usernameD = db.QueryValue("SELECT username FROM users WHERE list_code=@0", listcode);
+            var giftName = db.QueryValue("SELECT gift_name FROM wish_list WHERE gift_id=@0", id);
+
+            if (Session["username"] != null)
+            {
+                if (Session["username"].ToString() == usernameD.ToString())
+                {
+                    if (giftName != null)
+                    {
+                        db.Execute("DELETE FROM wish_list WHERE gift_id=@0", id);
+                        message = "Het cadeau: \"" + giftName.ToString() +"\" is succesvol verwijderd";
+                    }
+                }
+                else
+                {
+                    message = "Niet ingelogt op juiste username";
+                }
+            }
+            else
+            {
+                message = "Niet ingelogt";
+            }
+        }
+    }
+}
+
+        <p>@message</p>
+        <form action="~/Gifts" method="post">
+            <input type="Submit" value="Terug" /><br/>
+            </form>
+

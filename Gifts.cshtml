@@ -1,0 +1,243 @@
+﻿@{
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Cadeau lijst";    
+
+    var message = "";
+    var db = Database.Open("Database1");
+    
+    var lijstUser = "";
+    int lastId;
+
+
+    string guestvalue = string.Empty;
+     
+    if (Session["guestname"] != null)
+    {
+        guestvalue = Session["guestname"].ToString();
+    }
+
+    //Cadeau toevoegen
+    if (IsPost)
+    {
+        if (!Request.QueryString["guestname"].IsEmpty())
+        {
+            guestvalue = Request.QueryString["guestname"];
+        }
+
+        if (!Request["giftName"].IsEmpty() && !Request["giftPrice"].IsEmpty())
+        {
+            string desc = "Geen beschrijving";
+            string prio = "1";
+            if (!Request["priority"].IsEmpty()){prio = Request["priority"];}           
+            if (!Request["description"].IsEmpty()) {desc = Request["description"];}
+            var code = db.QueryValue("SELECT list_code FROM users WHERE username=@0", Session["userName"]);
+            lastId = db.QueryValue("SELECT MAX(gift_id) FROM wish_list") + 1;
+            message = "Cadeau succesvol toegevoegd";
+            Session["listcode"] = code;
+            db.Execute("INSERT INTO wish_list VALUES (@0,@1,@2,@3,@4,@5,@6,@7)", code,prio, Request["giftName"], Request["giftPrice"], "Niet gekocht", lastId,"Niemand", desc);
+            Response.Redirect("~/Gifts");
+        }
+        else
+        {
+            if (Session["username"] != null) { message = "Vul minimaal de velden \"Cadeau naam\" en \"Cadeau prijs\" in a.u.b";}
+        }
+    }
+    
+
+    //Kijken of je ingelogd bent, en daarop een select command maken (gast ziet alleen niet gekochte items)
+    string listnumber = string.Empty;
+
+
+    string selectCommand = string.Empty;
+
+    if (Session["username"] != null)
+    {
+        selectCommand = "SELECT priority, gift_name, gift_price, status, gift_id, bought_name, gift_description FROM wish_list WHERE list_code=@0";
+    }
+    else
+    {
+        selectCommand = "SELECT priority, gift_name, gift_price, status, gift_id, gift_description FROM wish_list WHERE list_code=@0 AND status='Niet gekocht'";
+    }
+
+
+    //Listnumber ophalen van meerdere plekken mogelijk
+    if (Request["listNumber"] != null)
+    {
+        listnumber = Request["listNumber"].ToString();
+        Response.Redirect("~/Gifts?listcode="+listnumber);
+    }
+
+    if (Request["listNumber"].IsEmpty() && Session["username"] != null)
+    {
+        listnumber = db.QueryValue("SELECT list_code FROM users WHERE username=@0", Session["userName"]).ToString();
+    }
+
+   
+
+
+    if (Session["listcode"] != null)
+    {
+       
+        listnumber = Session["listcode"].ToString();
+        
+    }
+
+     if (!Request.QueryString["listcode"].IsEmpty())
+    {
+        
+        listnumber = Request.QueryString["listcode"];
+        Session["listcode"] = Request.QueryString["listcode"];
+    }
+
+   
+    if (listnumber != string.Empty)
+    {
+        lijstUser = db.QueryValue("SELECT username FROM users WHERE list_code=@0", listnumber);
+    }
+
+
+    //Cadeau status naar gekocht of niet gekocht zetten
+    if (Request.QueryString["status"] != null && Request.QueryString["id"] != null)
+    {
+        if (Session["username"] != null && (Request.QueryString["status"] == "reset" || Request.QueryString["status"] == "bought") && Request.QueryString["id"].ToString().IsInt())
+        {
+            string usernameCheck = db.QueryValue("SELECT username FROM users WHERE list_code=@0", listnumber);
+            if (usernameCheck == Session["username"].ToString())
+            {
+                if (Request.QueryString["status"] == "reset")
+                {
+                    db.Execute("UPDATE wish_list SET status='Niet gekocht' WHERE gift_id=@0", Request.QueryString["id"].ToString());
+                }
+                else
+                {
+                    db.Execute("UPDATE wish_list SET status='Gekocht' WHERE gift_id=@0", Request.QueryString["id"].ToString());
+                }
+            }
+        }
+    }
+
+    //lege gast name error
+    if (Request.QueryString["status"] == "emptyguest")
+    {
+        message = "U kunt geen cadeau reserveren zonder een naam te geven.";
+    }
+
+
+    //Lijst ophalen en in Webgrid zetten
+    var selectedData = db.Query(selectCommand, listnumber);
+    if (selectedData.LongCount() == 0 && IsPost && Session["username"] == null && listnumber != string.Empty && IsPost)
+    {
+        message = "Geen lijst gevonden / Alle cadeau's zijn al Gereserveerd!";
+    }
+
+    var grid = new WebGrid(source: selectedData, defaultSort: "priority", rowsPerPage:10);
+    grid.SortDirection = SortDirection.Descending;
+
+
+    
+   
+    string host = HttpContext.Current.Request.Url.Authority;
+    
+
+
+}
+
+        
+        <form method="post" action="~/Gifts?listcode=@Session["listcode"]">
+
+            <div>
+                <p>@message</p>
+                
+
+                @if (Session["username"] != null)
+                {
+
+                    <p>Hier kan je een cadeau toevoegen aan je wenslijst.</p>
+                <input type="text" name="giftName" value="" placeholder="Cadeau naam" />
+
+                <input type="number" step="0.01" name="giftPrice" value="" placeholder="Cadeau prijs in euro"/>
+
+                <label for="priority">Cadeau prioriteit (Hoe hoger hoe belangrijker 0-100)</label>
+                <input type="number" name="priority" value="" min="0" max="100" placeholder="1"/>
+
+                <label for="giftPrice">Beschrijving</label>
+                <input type="text" name="description" value="" placeholder="Geen beschrijving"/>
+
+                <input type="Submit" value="Cadeau toevoegen" /><br/><br/>
+                }
+                else
+                {
+                <input type="text" name="listNumber" value="" placeholder="Lijstcode" />
+                <input type="Submit" value="Zoek lijst" /><br/>
+                }
+
+                <div>
+
+                @if (Session["username"] != null)
+                {
+
+                    <p>Uw lijstcode is: @listnumber (deze moet u aan uw gasten doorgeven of deze link:</p>
+                    <p><a href="~/Gifts?listcode=@listnumber">@host/Gifts?listcode=@listnumber/).</a></p>
+                    <p>Cadeau's met de status <span style="color: #640f0f">"Gekocht"</span>, zijn niet zichtbaar voor gasten.</p>
+                if(selectedData.Count() != 0)
+                {
+                @grid.GetHtml(
+                tableStyle: "grid",
+                headerStyle: "head",
+                alternatingRowStyle: "alt",
+                columns: grid.Columns(
+                    grid.Column("gift_name", "Cadeau Naam", canSort: false),
+                    grid.Column("gift_price","Prijs in €", canSort: false),
+                    grid.Column("priority", "prioriteit ", canSort: false),
+                    grid.Column("status","Status", canSort: false),
+                    grid.Column("bought_name", "Gekocht door",canSort: false ),
+                    grid.Column("gift_description","Beschrijving", canSort: false),
+                    grid.Column(format: @<a href="~/Gifts?id=@item.gift_id&status=bought"> "Gekocht"</a>, header:"Verander naar"),
+                    grid.Column(format: @<a href="~/Gifts?id=@item.gift_id&status=reset"> "Niet gekocht"</a>, header:"Verander naar"),
+                    grid.Column(format: @<a href="~/DeleteGift?id=@item.gift_id&listcode=@listnumber">Verwijder cadeau</a>),
+                    grid.Column(format: @<a href="~/EditGift?id=@item.gift_id&listcode=@listnumber">Wijzig cadeau</a>)
+                                        )   
+                            )
+                }
+                }
+                else 
+                {
+                if (selectedData.Count() != 0)
+                {
+                    <br/><br/>
+                    
+                    
+                   
+
+                    <p>Cadeau Lijst van @lijstUser</p>
+                    @grid.GetHtml(
+                tableStyle: "grid",
+                headerStyle: "head",
+                alternatingRowStyle: "alt",
+                columns: grid.Columns(
+                    grid.Column("gift_name", "Cadeau Naam", canSort: false),
+                    grid.Column("gift_price", "Prijs in €", canSort: false),
+                    grid.Column(format: @<a href="~/BuyGift?id=@item.gift_id&guestname=@guestvalue">Deze koop ik!</a>, header:"Reserveren?"),
+                    grid.Column("gift_description", "Beschrijving", canSort: false)
+                                        )   
+                                        )
+                          
+                }
+                }
+        </div>
+            </div>
+        </form>
+        </form>
+
+@if (Session["username"] != null)
+{
+        <br/>
+        <form action="~/Login?status=logout" method="post">
+             <input type="Submit" value="Uitloggen" /><br/>
+        </form>
+}
+        <br/>
+        <form action="~/Home" method="post">
+            <input type="Submit" value="Terug naar home" /><br/>
+        </form>
+

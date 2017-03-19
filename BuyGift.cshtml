@@ -1,0 +1,134 @@
+﻿@{
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Cadeau kopen";  
+      
+    string ID = "-1";
+    string giftName = "";
+    string brideName = "";
+    string message = "Error";
+    string knop = "Ja";
+    string actie = "";
+    string listcode = "1";
+    string giftDescription = string.Empty;
+    string giftCosts = string.Empty;
+
+
+    Validation.RequireField("guestname", "Voer uw naam in a.u.b.");
+
+
+    
+    if (Request["guestname"].IsEmpty())
+    {
+        Session["guestname"] = "Anoniem";
+    }
+    else
+    {
+        Session["guestname"] = Request["guestname"].ToString();
+    }
+
+    if (Request.QueryString["id"].IsInt())
+    {
+           ID = Request.QueryString["id"].ToString();
+           var db = Database.Open("Database1");
+           giftName = db.QueryValue("SELECT gift_name FROM wish_list WHERE gift_id=@0", ID);
+           listcode = db.QueryValue("SELECT list_code FROM wish_list WHERE gift_id=@0", ID);
+           brideName = db.QueryValue("SELECT username FROM users WHERE list_code=@0", listcode);
+          
+           if (Session["guestname"].ToString().Length > 0)
+           {
+                actie = "BuyGift?id=" + ID + "&status=ok";
+           }
+           else
+           {
+               actie = "BuyGift?id=" + ID;
+               message = "Voer een naam in a.u.b.";
+           }
+
+           if (Request.QueryString["status"] == "ok" && Session["guestname"].ToString().Count() > 0 )
+           {
+               db.Execute("UPDATE wish_list SET status='Gekocht' WHERE gift_id=@0", ID);
+               db.Execute("UPDATE wish_list SET bought_name=@0 WHERE gift_id=@1", Session["guestname"].ToString(), ID);
+               message = "Bedankt " + Session["guestname"].ToString() + ". Uw aanvraag is voltooid";
+               knop = "Terug";
+               actie = "Gifts/?listcode=" + listcode;
+
+               giftDescription = db.QueryValue("SELECT gift_description FROM wish_list WHERE gift_id=@0", ID);
+               giftCosts = db.QueryValue("SELECT gift_price FROM wish_list WHERE gift_id=@0", ID);
+           }
+    }
+
+
+    if (giftName!= "" && brideName != "" && Request.QueryString["status"] != "ok" && Session["guestname"] != null)
+    {
+        var db = Database.Open("Database1");
+        message = "Weet je zeker dat je het cadeau: \"" + giftName + "\" wilt reserveren voor \"" + brideName + "\"?" ;
+        giftDescription = db.QueryValue("SELECT gift_description FROM wish_list WHERE gift_id=@0", ID);
+        giftCosts = db.QueryValue("SELECT gift_price FROM wish_list WHERE gift_id=@0", ID);
+
+       
+    }
+
+    if(Request.QueryString["download"] == "yes")
+    {
+        var db = Database.Open("Database1");
+        giftName = db.QueryValue("SELECT gift_name FROM wish_list WHERE gift_id=@0", ID);
+        listcode = db.QueryValue("SELECT list_code FROM wish_list WHERE gift_id=@0", ID);
+        brideName = db.QueryValue("SELECT username FROM users WHERE list_code=@0", listcode);
+        giftDescription = db.QueryValue("SELECT gift_description FROM wish_list WHERE gift_id=@0", ID);
+        giftCosts = db.QueryValue("SELECT gift_price FROM wish_list WHERE gift_id=@0", ID);
+
+
+
+        string text = "Cadeau Naam: " + giftName + ",\t \n" + "Prijs: " + giftCosts + ",\t \n" + "Beschrijving: " + giftDescription + ",\t \n" + "Gereserveerd door " + Session["guestname"].ToString() + ", voor " + brideName + ".";
+
+        Response.Clear();
+        Response.ClearHeaders();
+
+        Response.AddHeader("Content-Length", text.Length.ToString());
+        Response.ContentType = "text/plain";
+        Response.AppendHeader("content-disposition", "attachment;filename=\"CadeauGegevens.txt\"");
+
+        Response.Write(text);
+        Response.End();
+
+    }
+
+
+
+
+}
+
+
+<p>@message</p>
+
+
+<form method="post" action=@actie>
+
+@if (knop == "Ja" && message != "Error")
+{
+    <p>Cadeau beschrijving: @giftDescription</p>
+    <p>Prijs: @giftCosts</p>
+    <p>Voer eventueel hier uw naam in:</p>
+    <p><input type="text" name="guestname" placeholder="Anoniem"  value="" />
+    @Html.ValidationMessage("password2")</p>
+    <br/>   
+}
+    @if (message != "Error")
+    {
+        <input type="Submit" value=@knop /><br/>
+    }
+</form>
+
+@if (knop != "Ja")
+{
+    <form method="post" action="~/BuyGift?id=@ID&status=ok&download=yes">
+        <input type="Submit" value="Download cadeau gegevens" /><br/>
+    </form>
+}
+
+@if(knop == "Ja")
+{
+    <form method="post" action="~/Gifts?listcode=@listcode">
+        <input type="Submit" value="Terug" /><br/>
+    </form>
+}

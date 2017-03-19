@@ -1,0 +1,106 @@
+﻿@{  
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Cadeau's Wijzigen";    
+
+
+    string message = "Er ging iets fout log op nieuw in en probeer het opnieuw a.u.b.";
+    string username = "";
+    string id = "-1";
+    string listcode = "";
+
+
+    string selectCommand = "SELECT priority, gift_name, gift_price, status, gift_id, bought_name, gift_description FROM wish_list WHERE gift_id=@0";
+
+    Database db = Database.Open("Database1");
+
+    if (Session["username"] != null && Request.QueryString["id"] != null && Request.QueryString["listcode"] != null)
+    {
+        username = Session["username"].ToString();
+        id = Request.QueryString["id"].ToString();
+        listcode = Request.QueryString["listcode"].ToString();
+
+        if (IsPost && Request["giftName"] != null && Request["giftPrice"] != null && Request["priority"] != null && Request["description"] != null)
+        {
+            string prio = "1";
+            string besc = "Geen beschrijving";
+
+            if (!Request["priority"].IsEmpty()) {prio = Request["priority"].ToString();}
+            if (!Request["description"].IsEmpty()) {besc = Request["description"].ToString();}
+
+            string price = Request["giftPrice"].ToString();
+            string newName = Request["giftName"].ToString();
+
+            if (Request["giftName"].Length < 1)
+            {
+                newName = db.QueryValue("SELECT gift_name FROM wish_list WHERE gift_id=@0", id);
+            }
+            if (Request["giftPrice"].Length < 1)
+            {
+                price = db.QueryValue("SELECT gift_price FROM wish_list WHERE gift_id=@0", id);
+            }
+
+            string updateString = "UPDATE wish_list SET gift_name=@0,gift_price=@1,priority=@2,gift_description=@3 WHERE gift_id=@4";
+            db.Execute(updateString, newName, price, prio, besc, id);
+        }
+
+        if (id.IsInt())
+        {
+            string listCheck = db.QueryValue("SELECT list_code FROM users WHERE username=@0", username);
+            string listCheck2 = db.QueryValue("SELECT list_code FROM wish_list WHERE gift_id=@0", id);
+            string usernameCheck = db.QueryValue("SELECT username FROM users WHERE list_code=@0", listcode);
+            if (listCheck == listCheck2 && usernameCheck == username)
+            {
+                message = "";
+            }
+        }
+    }
+
+    var selectedData = db.Query(selectCommand, id);
+   
+    var grid = new WebGrid(source: selectedData, defaultSort: "priority", rowsPerPage:10);
+
+}
+
+
+        <p>@message</p>
+
+        <form method="post">
+
+                <input type="text" name="giftName" value="" placeholder="Nieuwe cadeau naam" />
+
+                <input type="number" step="0.01" name="giftPrice" value="" placeholder="Cadeau prijs in euro"/>
+
+                <label for="priority">Cadeau prioriteit (Hoe hoger hoe belangrijker 0-100)</label>
+                <input type="number" name="priority" value="" min="0" max="100" placeholder="1"/>
+
+                <label for="giftPrice">Beschrijving</label>
+                <input type="text" name="description" value="" placeholder="Geen beschrijving"/><br/><br/>
+
+                <input type="Submit" value="Cadeau opslaan" /><br/><br/>
+        </form>
+
+        @if (selectedData.Count() != 0)
+        {
+        
+        @grid.GetHtml(
+                tableStyle: "grid",
+                headerStyle: "head",
+                alternatingRowStyle: "alt",
+                columns: grid.Columns(
+                    grid.Column("gift_name", "Cadeau Naam", canSort: false),
+                    grid.Column("gift_price","Prijs in €", canSort: false),
+                    grid.Column("priority", "prioriteit ", canSort: false),
+                    grid.Column("bought_name", "Gekocht door",canSort: false ),
+                    grid.Column("gift_description","Beschrijving", canSort: false)
+                                        )   
+                            );
+           }
+        
+        <br/><br/>
+        <form action="~/gifts" method="post">
+            <input type="Submit" value="Terug naar Cadeau's" /><br/>
+        </form>
+        <form action="~/Home" method="post">
+            <input type="Submit" value="Terug naar home" /><br/>
+        </form>
+           

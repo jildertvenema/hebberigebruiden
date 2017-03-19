@@ -1,0 +1,45 @@
+﻿@{
+    
+    Layout = "~/Layout/_Layout.cshtml";
+    Page.Title = "Gast";    
+
+    string message = "";
+    if (IsPost && Request["guestname"] != null)
+    {
+        if (Request["guestname"].ToString().Length > 0)
+        {
+            Session["guestname"] = Request["guestname"].ToString();
+            if (Session["listcode"] != null){ Response.Redirect("~/Gifts?listcode="+Session["listcode"].ToString());}
+            Response.Redirect("~/Gifts");
+        }
+    }
+    
+    if (IsPost){message="Voer uw naam in a.u.b";}
+    if (Session["username"] != null)
+    {
+        message = "Log eerst uit om als gast naar de lijsten te kijken";
+    }
+
+}
+
+        <div>
+            <p>@message</p>
+
+            @if (Session["username"] == null)
+            {
+        <form method="post">
+            <input type="text" value="" name="guestname" placeholder="Uw naam"/><br/>
+            <input type="Submit" value="Ga naar cadeau lijst" /><br/>
+        </form>
+
+        <form action="~/Home" method="post">
+            <input type="Submit" value="Terug naar Home" /><br/>
+        </form>
+            }
+            else
+            {
+                <form action="~/Login?status=logout" method="post">
+            <input type="Submit" value="Uitloggen" /><br/>
+                </form>
+            }
+        </div>
